@@ -4,6 +4,7 @@ import Icon from "@/components/ui/icon";
 const WORLDS_IMG = "https://cdn.poehali.dev/projects/b59acf8d-3d5d-46f0-ad85-cc4939d98c24/files/86f22661-5955-4f48-9bad-c282bc6b7539.jpg";
 const SHOP_IMG = "https://cdn.poehali.dev/projects/b59acf8d-3d5d-46f0-ad85-cc4939d98c24/files/1c8508ea-8c79-479a-ad7c-094d3460f56d.jpg";
 const FRIENDS_IMG = "https://cdn.poehali.dev/projects/b59acf8d-3d5d-46f0-ad85-cc4939d98c24/files/3b4fa1a8-44c6-459a-b77a-dbd15719c3a1.jpg";
+const BRAINROT_IMG = "https://cdn.poehali.dev/projects/b59acf8d-3d5d-46f0-ad85-cc4939d98c24/files/3364b6c2-896f-4a50-9e0f-b804290e740f.jpg";
 
 type Tab = "home" | "worlds" | "shop" | "profile" | "friends";
 
@@ -20,6 +21,7 @@ const worlds = [
   { id: 2, name: "Магазин Чудес", players: 892, rating: 4.7, tag: "Новый", tagColor: "#00CC44", img: SHOP_IMG },
   { id: 3, name: "Мир Друзей", players: 2156, rating: 5.0, tag: "Топ", tagColor: "#9B59FF", img: FRIENDS_IMG },
   { id: 4, name: "Подземелье Теней", players: 567, rating: 4.5, tag: "Сложно", tagColor: "#FF8C00", img: WORLDS_IMG },
+  { id: 5, name: "Укради Брейнрот", players: 9999, rating: 5.0, tag: "🧠 ВИРУС", tagColor: "#FF00FF", img: BRAINROT_IMG },
 ];
 
 const shopItems = [
