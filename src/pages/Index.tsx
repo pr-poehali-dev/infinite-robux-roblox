@@ -217,7 +217,364 @@ const worldDetails: Record<number, { desc: string; events: string[]; rewards: st
   5: { desc: "Хаотичный мир брейнрота! Укради самый редкий брейнрот до того, как это сделают другие!", events: ["🧠 Охота за брейнротом", "🤪 Битва мемов", "🌀 Вихрь безумия"], rewards: ["💎 +999 монет", "⭐ +1337 XP", "🧠 Легендарный Брейнрот"], danger: "МАКСИМАЛЬНАЯ" },
 };
 
-function WorldScreen({ world, onExit }: { world: typeof worlds[0]; onExit: () => void }) {
+// ===== BRAINROT MINIGAMES =====
+
+const BRAINROTS = ["🧠","🤪","💀","🫠","👾","🤡","👻","🦧","🐸","😵","🌀","🎪","🤯","👁️","🫃"];
+
+function BrainrotHunt({ onBack, onWin }: { onBack: () => void; onWin: (score: number) => void }) {
+  const [caught, setCaught] = useState<number[]>([]);
+  const [positions] = useState(() =>
+    Array.from({ length: 12 }, (_, i) => ({
+      id: i,
+      emoji: BRAINROTS[Math.floor(Math.random() * BRAINROTS.length)],
+      top: `${10 + Math.random() * 75}%`,
+      left: `${5 + Math.random() * 85}%`,
+      delay: `${Math.random() * 2}s`,
+      rare: Math.random() < 0.2,
+    }))
+  );
+  const [timeLeft, setTimeLeft] = useState(20);
+  const [done, setDone] = useState(false);
+
+  useState(() => {
+    const t = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) { clearInterval(t); setDone(true); return 0; }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(t);
+  });
+
+  const catchBrainrot = (id: number) => {
+    if (caught.includes(id) || done) return;
+    setCaught(prev => [...prev, id]);
+  };
+
+  const score = caught.reduce((acc, id) => acc + (positions[id]?.rare ? 150 : 50), 0);
+
+  return (
+    <div className="fixed inset-0 z-50 overflow-hidden select-none" style={{ background: "linear-gradient(135deg,#1a0050,#3d0070,#1a0030)" }}>
+      <div className="absolute top-0 left-0 right-0 z-20 p-3 flex items-center justify-between" style={{ background: "rgba(0,0,0,0.5)" }}>
+        <button onClick={onBack} className="px-3 py-1.5 rounded-xl font-black text-xs" style={{ background: "rgba(255,68,68,0.3)", color: "#FF4444" }}>← Назад</button>
+        <div style={{ fontFamily: "'Fredoka One', cursive" }} className="text-white text-base">🧠 Охота за брейнротом</div>
+        <div className="text-right">
+          <div className="font-black text-yellow-400 text-sm">{caught.length} / {positions.length}</div>
+          <div className={`text-xs font-black ${timeLeft <= 5 ? "text-red-400 animate-pulse" : "text-white/60"}`}>⏱ {timeLeft}с</div>
+        </div>
+      </div>
+
+      <div className="absolute inset-0 top-14">
+        {positions.map(pos => (
+          <button key={pos.id} onClick={() => catchBrainrot(pos.id)}
+            className="absolute transition-all duration-150 active:scale-50"
+            style={{ top: pos.top, left: pos.left, fontSize: pos.rare ? "2.8rem" : "2rem",
+              animation: `float ${2 + Math.random()}s ease-in-out ${pos.delay} infinite`,
+              opacity: caught.includes(pos.id) ? 0 : 1,
+              filter: pos.rare ? "drop-shadow(0 0 10px #FF00FF)" : "none",
+              transform: caught.includes(pos.id) ? "scale(0)" : "scale(1)",
+            }}>
+            {pos.emoji}
+            {pos.rare && !caught.includes(pos.id) && (
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-xs font-black" style={{ color: "#FF00FF", whiteSpace: "nowrap" }}>РЕДКИЙ!</div>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {done && (
+        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center" style={{ background: "rgba(0,0,0,0.85)" }}>
+          <div className="text-6xl mb-4 animate-bounce">🧠</div>
+          <h2 style={{ fontFamily: "'Fredoka One', cursive", fontSize: "2rem" }} className="text-white mb-2">Охота завершена!</h2>
+          <p className="text-white/70 font-semibold mb-1">Поймано: <span className="text-yellow-400 font-black">{caught.length}</span> брейнротов</p>
+          <p className="font-black text-2xl text-yellow-400 mb-6">+{score} очков</p>
+          <div className="flex gap-3">
+            <button onClick={onBack} className="px-6 py-2.5 rounded-xl font-black" style={{ background: "rgba(255,255,255,0.1)", color: "white" }}>Назад</button>
+            <button onClick={() => onWin(score)} className="px-6 py-2.5 rounded-xl font-black" style={{ background: "linear-gradient(135deg,#FF00FF,#9B59FF)", color: "white" }}>Забрать награду!</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BrainrotBattle({ onBack, onWin }: { onBack: () => void; onWin: (score: number) => void }) {
+  const [playerHp, setPlayerHp] = useState(100);
+  const [enemyHp, setEnemyHp] = useState(120);
+  const [log, setLog] = useState<string[]>(["⚔️ Битва началась! Атакуй!"]);
+  const [turn, setTurn] = useState<"player" | "enemy" | "done">("player");
+  const [shaking, setShaking] = useState(false);
+  const enemy = { name: "Мегабрейнрот", emoji: "🧠", maxHp: 120 };
+
+  const attacks = [
+    { name: "Мем-удар", emoji: "💥", dmg: [15, 25] as [number, number], color: "#FF4444" },
+    { name: "Брейнрот-взрыв", emoji: "🌀", dmg: [20, 35] as [number, number], color: "#FF00FF" },
+    { name: "Скибиди-удар", emoji: "🤪", dmg: [10, 20] as [number, number], color: "#FFD700" },
+  ];
+
+  const attack = (atk: typeof attacks[0]) => {
+    if (turn !== "player") return;
+    const dmg = atk.dmg[0] + Math.floor(Math.random() * (atk.dmg[1] - atk.dmg[0]));
+    const newEnemyHp = Math.max(0, enemyHp - dmg);
+    setEnemyHp(newEnemyHp);
+    setShaking(true);
+    setTimeout(() => setShaking(false), 400);
+    const newLog = [`${atk.emoji} ${atk.name}: -${dmg} HP врагу!`, ...log.slice(0, 4)];
+    if (newEnemyHp <= 0) { setLog(["🏆 Мегабрейнрот повержен! Победа!", ...newLog]); setTurn("done"); return; }
+    setLog(newLog);
+    setTurn("enemy");
+    setTimeout(() => {
+      const edm = 10 + Math.floor(Math.random() * 20);
+      const newPHp = Math.max(0, playerHp - edm);
+      setPlayerHp(newPHp);
+      setLog(prev => [`😵 Враг атакует: -${edm} HP!`, ...prev.slice(0, 4)]);
+      if (newPHp <= 0) { setTurn("done"); return; }
+      setTurn("player");
+    }, 1000);
+  };
+
+  const score = Math.max(0, Math.round((enemy.maxHp - enemyHp) * 5 + playerHp * 3));
+  const won = enemyHp <= 0;
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col overflow-hidden" style={{ background: "linear-gradient(180deg,#200040,#400020,#200040)" }}>
+      <div className="p-3 flex items-center justify-between" style={{ background: "rgba(0,0,0,0.5)" }}>
+        <button onClick={onBack} className="px-3 py-1.5 rounded-xl font-black text-xs" style={{ background: "rgba(255,68,68,0.3)", color: "#FF4444" }}>← Назад</button>
+        <div style={{ fontFamily: "'Fredoka One', cursive" }} className="text-white">🤪 Битва с брейнротом</div>
+        <div className="w-16" />
+      </div>
+
+      <div className="flex-1 flex flex-col px-4 gap-3 py-2 overflow-y-auto">
+        <div className="roblox-card p-4 text-center">
+          <div className={`text-6xl mb-2 transition-all ${shaking ? "animate-bounce" : "animate-float"}`} style={{ filter: "drop-shadow(0 0 20px #FF00FF)" }}>{enemy.emoji}</div>
+          <div style={{ fontFamily: "'Fredoka One', cursive" }} className="text-white text-lg">{enemy.name}</div>
+          <div className="mt-2">
+            <div className="flex justify-between text-xs mb-1">
+              <span className="text-red-400 font-black">❤️ HP врага</span>
+              <span className="text-white font-bold">{enemyHp}/{enemy.maxHp}</span>
+            </div>
+            <div className="h-4 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.1)" }}>
+              <div className="h-full rounded-full transition-all duration-500" style={{ width: `${(enemyHp / enemy.maxHp) * 100}%`, background: "linear-gradient(90deg,#FF00FF,#FF4444)" }} />
+            </div>
+          </div>
+        </div>
+
+        <div className="roblox-card p-3">
+          <div className="flex justify-between text-xs mb-1">
+            <span className="text-green-400 font-black">🧑 Твой HP</span>
+            <span className="text-white font-bold">{playerHp}/100</span>
+          </div>
+          <div className="h-3 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.1)" }}>
+            <div className="h-full rounded-full transition-all duration-500" style={{ width: `${playerHp}%`, background: "linear-gradient(90deg,#00CC44,#00A2FF)" }} />
+          </div>
+        </div>
+
+        <div className="roblox-card p-3 space-y-1">
+          {log.map((l, i) => (
+            <div key={i} className="text-xs font-semibold" style={{ color: i === 0 ? "white" : "rgba(255,255,255,0.4)" }}>{l}</div>
+          ))}
+        </div>
+
+        {turn === "player" && (
+          <div className="grid grid-cols-3 gap-2">
+            {attacks.map(atk => (
+              <button key={atk.name} onClick={() => attack(atk)}
+                className="p-3 rounded-xl text-center transition-all active:scale-95 hover:scale-105"
+                style={{ background: `${atk.color}33`, border: `1.5px solid ${atk.color}66`, color: "white" }}>
+                <div className="text-2xl mb-1">{atk.emoji}</div>
+                <div className="text-xs font-black leading-tight">{atk.name}</div>
+                <div className="text-xs mt-1" style={{ color: atk.color }}>-{atk.dmg[0]}~{atk.dmg[1]}</div>
+              </button>
+            ))}
+          </div>
+        )}
+        {turn === "enemy" && (
+          <div className="roblox-card p-4 text-center animate-pulse">
+            <p className="text-white/70 font-black">Враг атакует... 😰</p>
+          </div>
+        )}
+      </div>
+
+      {turn === "done" && (
+        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center" style={{ background: "rgba(0,0,0,0.85)" }}>
+          <div className="text-6xl mb-4 animate-bounce">{won ? "🏆" : "💀"}</div>
+          <h2 style={{ fontFamily: "'Fredoka One', cursive", fontSize: "2rem" }} className={won ? "text-yellow-400" : "text-red-400"}>
+            {won ? "Победа!" : "Поражение!"}
+          </h2>
+          <p className="text-white/70 font-semibold mt-2 mb-1">{won ? "Брейнрот побеждён!" : "Ты проиграл брейнроту..."}</p>
+          {won && <p className="font-black text-2xl text-yellow-400 mb-6">+{score} очков</p>}
+          <div className="flex gap-3 mt-4">
+            <button onClick={onBack} className="px-6 py-2.5 rounded-xl font-black" style={{ background: "rgba(255,255,255,0.1)", color: "white" }}>Назад</button>
+            {won && <button onClick={() => onWin(score)} className="px-6 py-2.5 rounded-xl font-black" style={{ background: "linear-gradient(135deg,#FFD700,#FF8C00)", color: "#1a1200" }}>Забрать!</button>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BrainrotVortex({ onBack, onWin }: { onBack: () => void; onWin: (score: number) => void }) {
+  const [active, setActive] = useState(true);
+  const [score, setScore] = useState(0);
+  const [tapped, setTapped] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(15);
+  const [items, setItems] = useState(() =>
+    Array.from({ length: 6 }, (_, i) => ({
+      id: i, emoji: BRAINROTS[Math.floor(Math.random() * BRAINROTS.length)],
+      x: 10 + Math.random() * 75, y: 15 + Math.random() * 65, alive: true,
+    }))
+  );
+
+  useState(() => {
+    const t = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) { clearInterval(t); setActive(false); return 0; }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(t);
+  });
+
+  const tap = (id: number) => {
+    if (!active) return;
+    setItems(prev => prev.map(it => it.id === id ? { ...it, alive: false } : it));
+    setScore(s => s + 77);
+    setTapped(t => t + 1);
+    setTimeout(() => {
+      setItems(prev => prev.map(it => it.id === id ? {
+        ...it, alive: true,
+        x: 10 + Math.random() * 75, y: 15 + Math.random() * 65,
+        emoji: BRAINROTS[Math.floor(Math.random() * BRAINROTS.length)],
+      } : it));
+    }, 800);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 overflow-hidden" style={{ background: "radial-gradient(circle at center,#3d0060,#1a0040,#000020)" }}>
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        {[200, 280, 360].map((size, i) => (
+          <div key={i} className="absolute rounded-full border" style={{
+            width: size, height: size,
+            borderColor: `rgba(255,0,255,${0.15 - i * 0.04})`,
+            animation: `spin-slow ${6 + i * 3}s linear infinite ${i % 2 ? "reverse" : ""}`,
+          }} />
+        ))}
+        <div className="text-7xl animate-spin-slow" style={{ filter: "drop-shadow(0 0 30px #FF00FF)" }}>🌀</div>
+      </div>
+
+      <div className="absolute top-0 left-0 right-0 z-20 p-3 flex items-center justify-between" style={{ background: "rgba(0,0,0,0.6)" }}>
+        <button onClick={onBack} className="px-3 py-1.5 rounded-xl font-black text-xs" style={{ background: "rgba(255,68,68,0.3)", color: "#FF4444" }}>← Назад</button>
+        <div style={{ fontFamily: "'Fredoka One', cursive" }} className="text-white">🌀 Вихрь безумия</div>
+        <div className="text-right">
+          <div className="font-black text-yellow-400 text-sm">×{tapped}</div>
+          <div className={`text-xs font-black ${timeLeft <= 5 ? "text-red-400 animate-pulse" : "text-white/60"}`}>⏱ {timeLeft}с</div>
+        </div>
+      </div>
+
+      <div className="absolute top-16 left-1/2 -translate-x-1/2 z-20 text-center">
+        <div className="font-black text-3xl shimmer-text">{score}</div>
+        <div className="text-xs text-white/50 font-bold">ОЧКИ</div>
+      </div>
+
+      {items.map(it => it.alive && (
+        <button key={it.id} onClick={() => tap(it.id)}
+          className="absolute z-10 transition-all duration-150 active:scale-50"
+          style={{ top: `${it.y}%`, left: `${it.x}%`, fontSize: "2.5rem",
+            animation: `float ${1.5 + Math.random()}s ease-in-out infinite`,
+            filter: "drop-shadow(0 0 8px #FF00FF)",
+          }}>
+          {it.emoji}
+        </button>
+      ))}
+
+      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 text-white/40 font-black text-sm z-20">ТЫЧ ПО БРЕЙНРОТАМ!</div>
+
+      {!active && (
+        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center" style={{ background: "rgba(0,0,0,0.85)" }}>
+          <div className="text-6xl mb-4 animate-bounce">🌀</div>
+          <h2 style={{ fontFamily: "'Fredoka One', cursive", fontSize: "2rem" }} className="shimmer-text mb-2">Вихрь стих!</h2>
+          <p className="text-white/70 font-semibold mb-1">Тычков: <span className="text-yellow-400 font-black">{tapped}</span></p>
+          <p className="font-black text-2xl text-yellow-400 mb-6">+{score} очков</p>
+          <div className="flex gap-3">
+            <button onClick={onBack} className="px-6 py-2.5 rounded-xl font-black" style={{ background: "rgba(255,255,255,0.1)", color: "white" }}>Назад</button>
+            <button onClick={() => onWin(score)} className="px-6 py-2.5 rounded-xl font-black" style={{ background: "linear-gradient(135deg,#FF00FF,#9B59FF)", color: "white" }}>Забрать!</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BrainrotWorld({ onExit }: { onExit: () => void }) {
+  const [minigame, setMinigame] = useState<"menu" | "hunt" | "battle" | "vortex">("menu");
+  const [totalScore, setTotalScore] = useState(0);
+  const [wonGames, setWonGames] = useState<string[]>([]);
+
+  const win = (game: string, score: number) => {
+    setTotalScore(s => s + score);
+    setWonGames(prev => prev.includes(game) ? prev : [...prev, game]);
+    setMinigame("menu");
+  };
+
+  if (minigame === "hunt") return <BrainrotHunt onBack={() => setMinigame("menu")} onWin={(s) => win("hunt", s)} />;
+  if (minigame === "battle") return <BrainrotBattle onBack={() => setMinigame("menu")} onWin={(s) => win("battle", s)} />;
+  if (minigame === "vortex") return <BrainrotVortex onBack={() => setMinigame("menu")} onWin={(s) => win("vortex", s)} />;
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col overflow-y-auto" style={{ background: "linear-gradient(135deg,#1a0050,#3d0070,#0a0030)" }}>
+      <div className="absolute inset-0 opacity-10">
+        <img src={BRAINROT_IMG} className="w-full h-full object-cover" alt="" />
+      </div>
+      <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom,rgba(26,0,80,0.85),rgba(61,0,112,0.9))" }} />
+
+      <div className="relative z-10 p-4 flex items-center justify-between">
+        <button onClick={onExit} className="flex items-center gap-2 px-3 py-2 rounded-xl font-black text-sm" style={{ background: "rgba(255,68,68,0.2)", color: "#FF4444", border: "1px solid rgba(255,68,68,0.4)" }}>
+          <Icon name="LogOut" size={14} /> Выйти
+        </button>
+        <div style={{ fontFamily: "'Fredoka One', cursive", fontSize: "1.2rem", color: "#FF00FF" }} className="animate-pulse">🧠 Укради Брейнрот</div>
+        <div className="px-3 py-1.5 rounded-full" style={{ background: "rgba(255,215,0,0.15)", border: "1.5px solid rgba(255,215,0,0.4)" }}>
+          <span className="text-xs text-yellow-400 font-black">⭐ {totalScore}</span>
+        </div>
+      </div>
+
+      <div className="relative z-10 flex-1 px-4 pb-6 space-y-4">
+        <div className="rounded-2xl p-5 text-center" style={{ background: "rgba(255,0,255,0.1)", border: "2px solid rgba(255,0,255,0.3)" }}>
+          <div className="text-5xl mb-2 animate-spin-slow">🌀</div>
+          <h2 style={{ fontFamily: "'Fredoka One', cursive", fontSize: "1.5rem" }} className="text-white mb-1">Мир абсолютного безумия</h2>
+          <p className="text-white/60 text-sm font-semibold">Выбери активность и заработай брейнрот-очки!</p>
+          {wonGames.length > 0 && (
+            <div className="mt-2 flex justify-center gap-2 flex-wrap">
+              {wonGames.map(g => <span key={g} className="badge-roblox" style={{ background: "rgba(0,255,0,0.2)", color: "#00FF88", border: "1px solid rgba(0,255,0,0.4)" }}>✓ {g === "hunt" ? "Охота" : g === "battle" ? "Битва" : "Вихрь"}</span>)}
+            </div>
+          )}
+        </div>
+
+        {[
+          { id: "hunt" as const, emoji: "🧠", title: "Охота за брейнротом", desc: "Лови брейнротов по всему экрану за 20 секунд! Редкие стоят больше.", reward: "до +2250 очков", color: "#9B59FF" },
+          { id: "battle" as const, emoji: "🤪", title: "Битва с брейнротом", desc: "Пошаговая битва с Мегабрейнротом. Выбирай атаки и побеждай!", reward: "до +999 очков", color: "#FF00FF" },
+          { id: "vortex" as const, emoji: "🌀", title: "Вихрь безумия", desc: "Тычь по летающим брейнротам пока не кончится время!", reward: "до +1500 очков", color: "#00A2FF" },
+        ].map(mg => (
+          <button key={mg.id} onClick={() => setMinigame(mg.id)}
+            className="w-full text-left rounded-2xl p-4 transition-all hover:scale-102 active:scale-98 flex items-center gap-4"
+            style={{ background: `${mg.color}18`, border: `2px solid ${mg.color}44` }}>
+            <div className="text-5xl flex-shrink-0 animate-float">{mg.emoji}</div>
+            <div className="flex-1">
+              <div style={{ fontFamily: "'Fredoka One', cursive", fontSize: "1.1rem", color: mg.color }}>{mg.title}</div>
+              <p className="text-white/60 text-xs font-semibold mt-0.5">{mg.desc}</p>
+              <div className="mt-2 inline-block px-2 py-0.5 rounded-full text-xs font-black" style={{ background: `${mg.color}33`, color: mg.color }}>
+                💎 {mg.reward}
+              </div>
+            </div>
+            <Icon name="ChevronRight" size={20} style={{ color: mg.color, opacity: 0.7 }} />
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ===== GENERIC WORLD SCREEN =====
+function GenericWorldScreen({ world, onExit }: { world: typeof worlds[0]; onExit: () => void }) {
   const [phase, setPhase] = useState<"loading" | "playing">("loading");
   const [hp] = useState(100);
   const [score, setScore] = useState(0);
@@ -231,10 +588,8 @@ function WorldScreen({ world, onExit }: { world: typeof worlds[0]; onExit: () =>
   if (phase === "loading") {
     return (
       <div className="fixed inset-0 z-50 flex flex-col items-center justify-center" style={{ background: "linear-gradient(135deg,#0a0a1a,#1a0a3e,#0a1a3e)" }}>
-        <div className="text-6xl mb-6 animate-bounce">{world.id === 5 ? "🧠" : "🚀"}</div>
-        <h2 style={{ fontFamily: "'Fredoka One', cursive", fontSize: "1.8rem" }} className="shimmer-text mb-2">
-          Загружаем мир...
-        </h2>
+        <div className="text-6xl mb-6 animate-bounce">🚀</div>
+        <h2 style={{ fontFamily: "'Fredoka One', cursive", fontSize: "1.8rem" }} className="shimmer-text mb-2">Загружаем мир...</h2>
         <p className="text-white/60 font-semibold mb-8">{world.name}</p>
         <div className="w-64 h-3 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.1)" }}>
           <div className="quest-bar h-full animate-pulse" style={{ width: "70%" }} />
@@ -246,52 +601,40 @@ function WorldScreen({ world, onExit }: { world: typeof worlds[0]; onExit: () =>
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col" style={{ background: "linear-gradient(180deg,#0a0a1a 0%,#0d1b4b 100%)" }}>
-      {/* World image bg */}
       <div className="absolute inset-0 opacity-20">
         <img src={world.img} className="w-full h-full object-cover" alt="" />
       </div>
       <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(5,10,30,0.95) 0%, rgba(5,10,30,0.6) 60%, rgba(5,10,30,0.8) 100%)" }} />
 
-      {/* HUD top */}
       <div className="relative z-10 p-4 flex items-center justify-between">
-        <button onClick={onExit} className="flex items-center gap-2 px-3 py-2 rounded-xl font-black text-sm transition-all hover:scale-105" style={{ background: "rgba(255,68,68,0.2)", color: "#FF4444", border: "1px solid rgba(255,68,68,0.4)" }}>
+        <button onClick={onExit} className="flex items-center gap-2 px-3 py-2 rounded-xl font-black text-sm" style={{ background: "rgba(255,68,68,0.2)", color: "#FF4444", border: "1px solid rgba(255,68,68,0.4)" }}>
           <Icon name="LogOut" size={14} /> Выйти
         </button>
-        <div style={{ fontFamily: "'Fredoka One', cursive", fontSize: "1.1rem" }} className="text-white text-center">
-          {world.name}
-        </div>
+        <div style={{ fontFamily: "'Fredoka One', cursive", fontSize: "1.1rem" }} className="text-white">{world.name}</div>
         <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full" style={{ background: "rgba(255,215,0,0.15)", border: "1.5px solid rgba(255,215,0,0.4)" }}>
           <span className="text-xs text-yellow-400 font-black">⭐ {score}</span>
         </div>
       </div>
 
-      {/* Center - game area */}
       <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 gap-4">
-        {/* Avatar in world */}
         <div className="relative animate-float">
-          <div className="w-20 h-20 rounded-2xl flex items-center justify-center text-4xl" style={{ background: "linear-gradient(135deg,#9B59FF,#00A2FF)", boxShadow: "0 0 30px rgba(155,89,255,0.5)" }}>
-            🧑
-          </div>
+          <div className="w-20 h-20 rounded-2xl flex items-center justify-center text-4xl" style={{ background: "linear-gradient(135deg,#9B59FF,#00A2FF)", boxShadow: "0 0 30px rgba(155,89,255,0.5)" }}>🧑</div>
           <div className="absolute -top-2 -right-2 px-2 py-0.5 rounded-full text-xs font-black" style={{ background: "#FFD700", color: "#1a1200" }}>ЛВЛ 23</div>
         </div>
-
-        {/* HP bar */}
         <div className="w-48">
           <div className="flex justify-between text-xs mb-1">
             <span className="text-red-400 font-black">❤️ HP</span>
             <span className="text-white font-bold">{hp}/100</span>
           </div>
           <div className="h-3 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.1)" }}>
-            <div className="h-full rounded-full transition-all" style={{ width: `${hp}%`, background: "linear-gradient(90deg,#FF4444,#FF8C00)" }} />
+            <div className="h-full rounded-full" style={{ width: `${hp}%`, background: "linear-gradient(90deg,#FF4444,#FF8C00)" }} />
           </div>
         </div>
-
-        {/* Events */}
         <div className="w-full max-w-sm space-y-2">
           {details.events.map((ev, i) => (
             <button key={ev} onClick={() => setScore(s => s + (i + 1) * 10)}
-              className="w-full p-3 rounded-xl font-black text-sm text-white text-left transition-all hover:scale-102 active:scale-95 flex items-center gap-3"
-              style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)", animationDelay: `${i * 0.1}s` }}>
+              className="w-full p-3 rounded-xl font-black text-sm text-white text-left flex items-center gap-3 transition-all active:scale-95"
+              style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)" }}>
               <span className="text-xl">{ev.split(" ")[0]}</span>
               <div>
                 <div className="font-black">{ev.slice(ev.indexOf(" ") + 1)}</div>
@@ -303,14 +646,11 @@ function WorldScreen({ world, onExit }: { world: typeof worlds[0]; onExit: () =>
         </div>
       </div>
 
-      {/* HUD bottom */}
       <div className="relative z-10 p-4">
         <div className="roblox-card p-3 flex items-center justify-between">
           <div className="text-center">
             <div className="text-xs text-muted-foreground font-semibold">Опасность</div>
-            <div className="font-black text-sm" style={{ color: details.danger === "Нет" ? "#00CC44" : details.danger === "Низкая" ? "#00A2FF" : details.danger === "Средняя" ? "#FFD700" : details.danger === "Высокая" ? "#FF8C00" : "#FF00FF" }}>
-              {details.danger}
-            </div>
+            <div className="font-black text-sm" style={{ color: details.danger === "Нет" ? "#00CC44" : details.danger === "Низкая" ? "#00A2FF" : details.danger === "Средняя" ? "#FFD700" : "#FF8C00" }}>{details.danger}</div>
           </div>
           <div className="text-center">
             <div className="text-xs text-muted-foreground font-semibold">Игроков</div>
@@ -324,6 +664,11 @@ function WorldScreen({ world, onExit }: { world: typeof worlds[0]; onExit: () =>
       </div>
     </div>
   );
+}
+
+function WorldScreen({ world, onExit }: { world: typeof worlds[0]; onExit: () => void }) {
+  if (world.id === 5) return <BrainrotWorld onExit={onExit} />;
+  return <GenericWorldScreen world={world} onExit={onExit} />;
 }
 
 function WorldsTab({ worlds }: { worlds: typeof worlds }) {
