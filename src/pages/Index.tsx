@@ -209,8 +209,130 @@ function HomeTab({ level, xp, maxXp, quests, onNavigate }: { level: number; xp: 
   );
 }
 
+const worldDetails: Record<number, { desc: string; events: string[]; rewards: string[]; danger: string }> = {
+  1: { desc: "Исследуй острова, сражайся с пиратами и ищи сокровища!", events: ["⚔️ Битва с пиратами", "🏝️ Поиск сокровищ", "🌊 Морской шторм"], rewards: ["💎 +120 монет", "⭐ +500 XP", "🎁 Редкий сундук"], danger: "Средняя" },
+  2: { desc: "Торгуй, строй магазины и стань богатейшим купцом!", events: ["🛒 Аукцион редкостей", "📦 Доставка товаров", "💰 Золотая лихорадка"], rewards: ["💎 +200 монет", "⭐ +300 XP", "🏆 Значок Купца"], danger: "Низкая" },
+  3: { desc: "Знакомься с игроками со всего мира и строй вместе!", events: ["🤝 Турнир гильдий", "🏗️ Совместная стройка", "🎉 Вечеринка в мире"], rewards: ["💎 +80 монет", "⭐ +200 XP", "👥 +5 друзей"], danger: "Нет" },
+  4: { desc: "Тёмные подземелья полны монстров и тайн. Только для смелых!", events: ["👹 Рейд на босса", "🔦 Поиск в темноте", "💀 Выживание 10 волн"], rewards: ["💎 +350 монет", "⭐ +800 XP", "⚔️ Оружие Тьмы"], danger: "Высокая" },
+  5: { desc: "Хаотичный мир брейнрота! Укради самый редкий брейнрот до того, как это сделают другие!", events: ["🧠 Охота за брейнротом", "🤪 Битва мемов", "🌀 Вихрь безумия"], rewards: ["💎 +999 монет", "⭐ +1337 XP", "🧠 Легендарный Брейнрот"], danger: "МАКСИМАЛЬНАЯ" },
+};
+
+function WorldScreen({ world, onExit }: { world: typeof worlds[0]; onExit: () => void }) {
+  const [phase, setPhase] = useState<"loading" | "playing">("loading");
+  const [hp] = useState(100);
+  const [score, setScore] = useState(0);
+  const details = worldDetails[world.id];
+
+  useState(() => {
+    const t = setTimeout(() => setPhase("playing"), 2000);
+    return () => clearTimeout(t);
+  });
+
+  if (phase === "loading") {
+    return (
+      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center" style={{ background: "linear-gradient(135deg,#0a0a1a,#1a0a3e,#0a1a3e)" }}>
+        <div className="text-6xl mb-6 animate-bounce">{world.id === 5 ? "🧠" : "🚀"}</div>
+        <h2 style={{ fontFamily: "'Fredoka One', cursive", fontSize: "1.8rem" }} className="shimmer-text mb-2">
+          Загружаем мир...
+        </h2>
+        <p className="text-white/60 font-semibold mb-8">{world.name}</p>
+        <div className="w-64 h-3 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.1)" }}>
+          <div className="quest-bar h-full animate-pulse" style={{ width: "70%" }} />
+        </div>
+        <p className="text-xs text-white/40 font-bold mt-3">Телепортация игрока...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col" style={{ background: "linear-gradient(180deg,#0a0a1a 0%,#0d1b4b 100%)" }}>
+      {/* World image bg */}
+      <div className="absolute inset-0 opacity-20">
+        <img src={world.img} className="w-full h-full object-cover" alt="" />
+      </div>
+      <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(5,10,30,0.95) 0%, rgba(5,10,30,0.6) 60%, rgba(5,10,30,0.8) 100%)" }} />
+
+      {/* HUD top */}
+      <div className="relative z-10 p-4 flex items-center justify-between">
+        <button onClick={onExit} className="flex items-center gap-2 px-3 py-2 rounded-xl font-black text-sm transition-all hover:scale-105" style={{ background: "rgba(255,68,68,0.2)", color: "#FF4444", border: "1px solid rgba(255,68,68,0.4)" }}>
+          <Icon name="LogOut" size={14} /> Выйти
+        </button>
+        <div style={{ fontFamily: "'Fredoka One', cursive", fontSize: "1.1rem" }} className="text-white text-center">
+          {world.name}
+        </div>
+        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full" style={{ background: "rgba(255,215,0,0.15)", border: "1.5px solid rgba(255,215,0,0.4)" }}>
+          <span className="text-xs text-yellow-400 font-black">⭐ {score}</span>
+        </div>
+      </div>
+
+      {/* Center - game area */}
+      <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 gap-4">
+        {/* Avatar in world */}
+        <div className="relative animate-float">
+          <div className="w-20 h-20 rounded-2xl flex items-center justify-center text-4xl" style={{ background: "linear-gradient(135deg,#9B59FF,#00A2FF)", boxShadow: "0 0 30px rgba(155,89,255,0.5)" }}>
+            🧑
+          </div>
+          <div className="absolute -top-2 -right-2 px-2 py-0.5 rounded-full text-xs font-black" style={{ background: "#FFD700", color: "#1a1200" }}>ЛВЛ 23</div>
+        </div>
+
+        {/* HP bar */}
+        <div className="w-48">
+          <div className="flex justify-between text-xs mb-1">
+            <span className="text-red-400 font-black">❤️ HP</span>
+            <span className="text-white font-bold">{hp}/100</span>
+          </div>
+          <div className="h-3 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.1)" }}>
+            <div className="h-full rounded-full transition-all" style={{ width: `${hp}%`, background: "linear-gradient(90deg,#FF4444,#FF8C00)" }} />
+          </div>
+        </div>
+
+        {/* Events */}
+        <div className="w-full max-w-sm space-y-2">
+          {details.events.map((ev, i) => (
+            <button key={ev} onClick={() => setScore(s => s + (i + 1) * 10)}
+              className="w-full p-3 rounded-xl font-black text-sm text-white text-left transition-all hover:scale-102 active:scale-95 flex items-center gap-3"
+              style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)", animationDelay: `${i * 0.1}s` }}>
+              <span className="text-xl">{ev.split(" ")[0]}</span>
+              <div>
+                <div className="font-black">{ev.slice(ev.indexOf(" ") + 1)}</div>
+                <div className="text-xs text-white/50 font-semibold">+{(i + 1) * 10} очков</div>
+              </div>
+              <Icon name="ChevronRight" size={16} className="ml-auto opacity-50" />
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* HUD bottom */}
+      <div className="relative z-10 p-4">
+        <div className="roblox-card p-3 flex items-center justify-between">
+          <div className="text-center">
+            <div className="text-xs text-muted-foreground font-semibold">Опасность</div>
+            <div className="font-black text-sm" style={{ color: details.danger === "Нет" ? "#00CC44" : details.danger === "Низкая" ? "#00A2FF" : details.danger === "Средняя" ? "#FFD700" : details.danger === "Высокая" ? "#FF8C00" : "#FF00FF" }}>
+              {details.danger}
+            </div>
+          </div>
+          <div className="text-center">
+            <div className="text-xs text-muted-foreground font-semibold">Игроков</div>
+            <div className="font-black text-sm text-white">👥 {world.players.toLocaleString()}</div>
+          </div>
+          <div className="text-center">
+            <div className="text-xs text-muted-foreground font-semibold">Награды</div>
+            <div className="font-black text-sm text-yellow-400">{details.rewards[0]}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function WorldsTab({ worlds }: { worlds: typeof worlds }) {
   const [selected, setSelected] = useState<number | null>(null);
+  const [activeWorld, setActiveWorld] = useState<typeof worlds[0] | null>(null);
+
+  if (activeWorld) {
+    return <WorldScreen world={activeWorld} onExit={() => setActiveWorld(null)} />;
+  }
 
   return (
     <div className="space-y-5 animate-slide-up">
@@ -235,7 +357,10 @@ function WorldsTab({ worlds }: { worlds: typeof worlds }) {
                 <span className="text-xs text-yellow-400 font-bold">⭐ {world.rating}</span>
               </div>
               {selected === world.id && (
-                <button className="mt-3 w-full py-2 rounded-xl font-black text-sm transition-all animate-bounce-in" style={{ background: "linear-gradient(135deg,#FFD700,#FF8C00)", color: "#1a1200" }}>
+                <button
+                  onClick={e => { e.stopPropagation(); setActiveWorld(world); }}
+                  className="mt-3 w-full py-2 rounded-xl font-black text-sm transition-all animate-bounce-in hover:scale-105"
+                  style={{ background: "linear-gradient(135deg,#FFD700,#FF8C00)", color: "#1a1200" }}>
                   🚀 Войти в мир!
                 </button>
               )}
@@ -248,8 +373,8 @@ function WorldsTab({ worlds }: { worlds: typeof worlds }) {
         <h3 className="font-black text-white mb-3">🔥 Сейчас в сети</h3>
         <div className="flex items-center gap-4">
           {[
-            { value: "4,858", label: "Игроков", color: "#00CC44" },
-            { value: "4", label: "Миров", color: "#00A2FF" },
+            { value: "14,858", label: "Игроков", color: "#00CC44" },
+            { value: "5", label: "Миров", color: "#00A2FF" },
             { value: "24/7", label: "Онлайн", color: "#FFD700" },
           ].map((s, i) => (
             <div key={s.label} className="flex items-center gap-4">
