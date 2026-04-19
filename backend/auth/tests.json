@@ -1,0 +1,28 @@
+{
+  "tests": [
+    {
+      "name": "Register new user",
+      "method": "POST",
+      "path": "/?action=register",
+      "body": {"username": "TestPlayer", "email": "test@roblox.ru", "password": "secret123"},
+      "expectedStatus": 200,
+      "expectedBody": {"token": "string"},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Login with wrong password",
+      "method": "POST",
+      "path": "/?action=login",
+      "body": {"login": "test@roblox.ru", "password": "wrongpass"},
+      "expectedStatus": 401,
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Get profile without token",
+      "method": "GET",
+      "path": "/?action=me",
+      "expectedStatus": 401,
+      "bodyMatcher": "partial"
+    }
+  ]
+}

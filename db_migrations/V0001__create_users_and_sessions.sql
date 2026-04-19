@@ -1,0 +1,20 @@
+CREATE TABLE IF NOT EXISTS t_p46821773_infinite_robux_roblo.users (
+  id SERIAL PRIMARY KEY,
+  username VARCHAR(32) UNIQUE NOT NULL,
+  email VARCHAR(255) UNIQUE NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  robux INTEGER NOT NULL DEFAULT 1250,
+  level INTEGER NOT NULL DEFAULT 1,
+  xp INTEGER NOT NULL DEFAULT 0,
+  avatar VARCHAR(10) NOT NULL DEFAULT '🧑',
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  last_login TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS t_p46821773_infinite_robux_roblo.sessions (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES t_p46821773_infinite_robux_roblo.users(id),
+  token VARCHAR(64) UNIQUE NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  expires_at TIMESTAMP NOT NULL DEFAULT (NOW() + INTERVAL '30 days')
+);
