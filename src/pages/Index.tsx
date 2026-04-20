@@ -48,6 +48,18 @@ const robuxPacks = [
   { amount: 4500, price: "999₽", bonus: "+450 бонус", color: "from-yellow-400 to-orange-500" },
 ];
 
+// ===== BRAINROT SHOP CATALOGUE =====
+const brainrotCatalogue = [
+  { id: 101, name: "Скибиди", emoji: "🚽", price: 80, rarity: "Обычный", color: "#00A2FF" },
+  { id: 102, name: "Дориан", emoji: "🧠", price: 150, rarity: "Редкий", color: "#9B59FF" },
+  { id: 103, name: "Фан-Хёй", emoji: "🤪", price: 120, rarity: "Обычный", color: "#FF8C00" },
+  { id: 104, name: "Тролль", emoji: "😈", price: 200, rarity: "Эпический", color: "#FF00FF" },
+  { id: 105, name: "Гигачад", emoji: "💪", price: 300, rarity: "Легендарный", color: "#FFD700" },
+  { id: 106, name: "Котобрейн", emoji: "🐱", price: 90, rarity: "Обычный", color: "#00CC44" },
+  { id: 107, name: "Зомби", emoji: "🧟", price: 180, rarity: "Редкий", color: "#FF4444" },
+  { id: 108, name: "Робот", emoji: "🤖", price: 250, rarity: "Эпический", color: "#00A2FF" },
+];
+
 export default function Index() {
   const [tab, setTab] = useState<Tab>("home");
   const [robux] = useState(1250);
@@ -55,6 +67,9 @@ export default function Index() {
   const [xp] = useState(6700);
   const [maxXp] = useState(10000);
   const [inventory, setInventory] = useState<number[]>([1]);
+  const [coins, setCoins] = useState(320);
+  const [avatar, setAvatar] = useState("🧑");
+  const [ownedBrainrots, setOwnedBrainrots] = useState<number[]>([]);
 
   const navItems: { id: Tab; label: string; emoji: string }[] = [
     { id: "home", label: "Главная", emoji: "🏠" },
@@ -76,14 +91,18 @@ export default function Index() {
             </span>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 px-2.5 py-1.5 rounded-full" style={{ background: "rgba(255,165,0,0.15)", border: "1.5px solid rgba(255,165,0,0.4)" }}>
+              <span>🪙</span>
+              <span className="font-black text-orange-400 text-sm">{coins.toLocaleString()}</span>
+            </div>
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full" style={{ background: "rgba(255,215,0,0.15)", border: "1.5px solid rgba(255,215,0,0.4)" }}>
               <span>💎</span>
               <span className="font-black text-yellow-400">{robux.toLocaleString()}</span>
               <span className="text-xs text-yellow-400/70 font-bold">ROBUX</span>
             </div>
             <div className="w-9 h-9 rounded-full flex items-center justify-center text-lg" style={{ background: "linear-gradient(135deg,#9B59FF,#00A2FF)" }}>
-              🧑
+              {avatar}
             </div>
           </div>
         </div>
@@ -91,10 +110,10 @@ export default function Index() {
 
       {/* Content */}
       <main className="flex-1 max-w-6xl mx-auto w-full px-4 py-6">
-        {tab === "home" && <HomeTab level={level} xp={xp} maxXp={maxXp} robux={robux} quests={quests} onNavigate={setTab} />}
-        {tab === "worlds" && <WorldsTab worlds={worlds} />}
+        {tab === "home" && <HomeTab level={level} xp={xp} maxXp={maxXp} robux={robux} coins={coins} quests={quests} onNavigate={setTab} />}
+        {tab === "worlds" && <WorldsTab worlds={worlds} coins={coins} setCoins={setCoins} avatar={avatar} ownedBrainrots={ownedBrainrots} setOwnedBrainrots={setOwnedBrainrots} />}
         {tab === "shop" && <ShopTab items={shopItems} packs={robuxPacks} inventory={inventory} setInventory={setInventory} robux={robux} />}
-        {tab === "profile" && <ProfileTab level={level} xp={xp} maxXp={maxXp} robux={robux} quests={quests} inventory={inventory} items={shopItems} />}
+        {tab === "profile" && <ProfileTab level={level} xp={xp} maxXp={maxXp} robux={robux} coins={coins} quests={quests} inventory={inventory} items={shopItems} avatar={avatar} setAvatar={setAvatar} ownedBrainrots={ownedBrainrots} />}
         {tab === "friends" && <FriendsTab friends={friends} onlineFriends={friends.filter(f => f.status === "online").length} />}
       </main>
 
@@ -118,7 +137,7 @@ export default function Index() {
   );
 }
 
-function HomeTab({ level, xp, maxXp, quests, onNavigate }: { level: number; xp: number; maxXp: number; robux: number; quests: typeof quests; onNavigate: (t: Tab) => void }) {
+function HomeTab({ level, xp, maxXp, coins, quests, onNavigate }: { level: number; xp: number; maxXp: number; robux: number; coins: number; quests: typeof quests; onNavigate: (t: Tab) => void }) {
   const xpPct = Math.round((xp / maxXp) * 100);
 
   return (
@@ -164,7 +183,7 @@ function HomeTab({ level, xp, maxXp, quests, onNavigate }: { level: number; xp: 
       <div className="grid grid-cols-3 gap-3">
         {[
           { label: "Уровень", value: level, emoji: "⭐", color: "#FFD700" },
-          { label: "Монеты", value: "1,250", emoji: "💎", color: "#00A2FF" },
+          { label: "Монеты", value: coins.toLocaleString(), emoji: "🪙", color: "#FF8C00" },
           { label: "Квесты", value: `${quests.filter(q => q.done).length}/${quests.length}`, emoji: "📜", color: "#00CC44" },
         ].map(stat => (
           <div key={stat.label} className="roblox-card p-3 text-center">
@@ -505,23 +524,81 @@ function BrainrotVortex({ onBack, onWin }: { onBack: () => void; onWin: (score: 
   );
 }
 
-function BrainrotWorld({ onExit }: { onExit: () => void }) {
-  const [minigame, setMinigame] = useState<"menu" | "hunt" | "battle" | "vortex">("menu");
-  const [totalScore, setTotalScore] = useState(0);
+function BrainrotShop({ coins, setCoins, ownedBrainrots, setOwnedBrainrots, onClose }: { coins: number; setCoins: (fn: (c: number) => number) => void; ownedBrainrots: number[]; setOwnedBrainrots: (fn: (b: number[]) => number[]) => void; onClose: () => void }) {
+  const [bought, setBought] = useState<number | null>(null);
+
+  const buy = (item: typeof brainrotCatalogue[0]) => {
+    if (ownedBrainrots.includes(item.id) || coins < item.price) return;
+    setCoins(c => c - item.price);
+    setOwnedBrainrots(b => [...b, item.id]);
+    setBought(item.id);
+    setTimeout(() => setBought(null), 1500);
+  };
+
+  const rarityColor: Record<string, string> = { "Обычный": "#00A2FF", "Редкий": "#9B59FF", "Эпический": "#FF00FF", "Легендарный": "#FFD700" };
+
+  return (
+    <div className="fixed inset-0 z-[60] flex flex-col" style={{ background: "rgba(0,0,0,0.92)" }}>
+      <div className="p-4 flex items-center justify-between border-b" style={{ borderColor: "rgba(255,0,255,0.2)" }}>
+        <button onClick={onClose} className="px-3 py-1.5 rounded-xl font-black text-xs" style={{ background: "rgba(255,68,68,0.3)", color: "#FF4444" }}>← Назад</button>
+        <div style={{ fontFamily: "'Fredoka One', cursive", fontSize: "1.1rem", color: "#FF00FF" }}>🏪 Магазин Брейнротов</div>
+        <div className="flex items-center gap-1 px-2.5 py-1 rounded-full" style={{ background: "rgba(255,165,0,0.2)", border: "1px solid rgba(255,165,0,0.4)" }}>
+          <span className="text-sm">🪙</span>
+          <span className="font-black text-orange-400">{coins}</span>
+        </div>
+      </div>
+      <div className="flex-1 overflow-y-auto p-4">
+        <p className="text-white/50 text-xs font-bold mb-3 text-center">Купи брейнрота — он станет твоим аватаром!</p>
+        <div className="grid grid-cols-2 gap-3">
+          {brainrotCatalogue.map(item => {
+            const owned = ownedBrainrots.includes(item.id);
+            const canAfford = coins >= item.price;
+            const justBought = bought === item.id;
+            return (
+              <div key={item.id} className="rounded-2xl p-4 text-center flex flex-col items-center" style={{ background: `${item.color}15`, border: `2px solid ${owned ? "#00FF88" : item.color}44` }}>
+                <div className={`text-5xl mb-2 ${justBought ? "animate-bounce" : "animate-float"}`}>{item.emoji}</div>
+                <div className="font-black text-white text-sm">{item.name}</div>
+                <div className="text-xs font-bold mt-0.5 mb-2" style={{ color: rarityColor[item.rarity] }}>{item.rarity}</div>
+                <button onClick={() => buy(item)} disabled={owned || !canAfford}
+                  className="w-full py-1.5 rounded-xl font-black text-xs transition-all"
+                  style={owned
+                    ? { background: "rgba(0,255,136,0.2)", color: "#00FF88", border: "1px solid rgba(0,255,136,0.4)" }
+                    : canAfford
+                    ? { background: `linear-gradient(135deg,${item.color},${item.color}cc)`, color: "white" }
+                    : { background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.3)", border: "1px solid rgba(255,255,255,0.1)" }}>
+                  {owned ? "✓ Куплен" : canAfford ? `🪙 ${item.price}` : `🔒 ${item.price}`}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BrainrotWorld({ onExit, playerProps }: { onExit: () => void; playerProps: PlayerProps }) {
+  const { coins, setCoins, avatar, ownedBrainrots, setOwnedBrainrots } = playerProps;
+  const [minigame, setMinigame] = useState<"menu" | "hunt" | "battle" | "vortex" | "shop">("menu");
+  const [totalEarned, setTotalEarned] = useState(0);
   const [wonGames, setWonGames] = useState<string[]>([]);
 
-  const win = (game: string, score: number) => {
-    setTotalScore(s => s + score);
+  const win = (game: string, earned: number) => {
+    setTotalEarned(s => s + earned);
+    setCoins(c => c + earned);
     setWonGames(prev => prev.includes(game) ? prev : [...prev, game]);
     setMinigame("menu");
   };
 
-  if (minigame === "hunt") return <BrainrotHunt onBack={() => setMinigame("menu")} onWin={(s) => win("hunt", s)} />;
-  if (minigame === "battle") return <BrainrotBattle onBack={() => setMinigame("menu")} onWin={(s) => win("battle", s)} />;
-  if (minigame === "vortex") return <BrainrotVortex onBack={() => setMinigame("menu")} onWin={(s) => win("vortex", s)} />;
+  if (minigame === "hunt") return <BrainrotHunt onBack={() => setMinigame("menu")} onWin={(s) => win("hunt", Math.round(s / 10))} />;
+  if (minigame === "battle") return <BrainrotBattle onBack={() => setMinigame("menu")} onWin={(s) => win("battle", Math.round(s / 8))} />;
+  if (minigame === "vortex") return <BrainrotVortex onBack={() => setMinigame("menu")} onWin={(s) => win("vortex", Math.round(s / 10))} />;
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col overflow-y-auto" style={{ background: "linear-gradient(135deg,#1a0050,#3d0070,#0a0030)" }}>
+      {minigame === "shop" && (
+        <BrainrotShop coins={coins} setCoins={setCoins} ownedBrainrots={ownedBrainrots} setOwnedBrainrots={setOwnedBrainrots} onClose={() => setMinigame("menu")} />
+      )}
       <div className="absolute inset-0 opacity-10">
         <img src={BRAINROT_IMG} className="w-full h-full object-cover" alt="" />
       </div>
@@ -532,16 +609,20 @@ function BrainrotWorld({ onExit }: { onExit: () => void }) {
           <Icon name="LogOut" size={14} /> Выйти
         </button>
         <div style={{ fontFamily: "'Fredoka One', cursive", fontSize: "1.2rem", color: "#FF00FF" }} className="animate-pulse">🧠 Укради Брейнрот</div>
-        <div className="px-3 py-1.5 rounded-full" style={{ background: "rgba(255,215,0,0.15)", border: "1.5px solid rgba(255,215,0,0.4)" }}>
-          <span className="text-xs text-yellow-400 font-black">⭐ {totalScore}</span>
+        <div className="flex items-center gap-1 px-2.5 py-1.5 rounded-full" style={{ background: "rgba(255,165,0,0.15)", border: "1.5px solid rgba(255,165,0,0.4)" }}>
+          <span>🪙</span>
+          <span className="font-black text-orange-400 text-sm">{coins}</span>
         </div>
       </div>
 
       <div className="relative z-10 flex-1 px-4 pb-6 space-y-4">
-        <div className="rounded-2xl p-5 text-center" style={{ background: "rgba(255,0,255,0.1)", border: "2px solid rgba(255,0,255,0.3)" }}>
-          <div className="text-5xl mb-2 animate-spin-slow">🌀</div>
-          <h2 style={{ fontFamily: "'Fredoka One', cursive", fontSize: "1.5rem" }} className="text-white mb-1">Мир абсолютного безумия</h2>
-          <p className="text-white/60 text-sm font-semibold">Выбери активность и заработай брейнрот-очки!</p>
+        <div className="rounded-2xl p-4 text-center" style={{ background: "rgba(255,0,255,0.1)", border: "2px solid rgba(255,0,255,0.3)" }}>
+          <div className="w-16 h-16 rounded-2xl mx-auto mb-2 flex items-center justify-center text-4xl" style={{ background: "linear-gradient(135deg,#9B59FF,#FF00FF)", boxShadow: "0 0 20px rgba(255,0,255,0.4)" }}>
+            {avatar}
+          </div>
+          <h2 style={{ fontFamily: "'Fredoka One', cursive", fontSize: "1.4rem" }} className="text-white mb-1">Мир абсолютного безумия</h2>
+          <p className="text-white/60 text-xs font-semibold">Зарабатывай монеты и покупай брейнротов!</p>
+          {totalEarned > 0 && <p className="text-orange-400 font-black text-sm mt-1">+{totalEarned} 🪙 заработано сегодня</p>}
           {wonGames.length > 0 && (
             <div className="mt-2 flex justify-center gap-2 flex-wrap">
               {wonGames.map(g => <span key={g} className="badge-roblox" style={{ background: "rgba(0,255,0,0.2)", color: "#00FF88", border: "1px solid rgba(0,255,0,0.4)" }}>✓ {g === "hunt" ? "Охота" : g === "battle" ? "Битва" : "Вихрь"}</span>)}
@@ -550,31 +631,40 @@ function BrainrotWorld({ onExit }: { onExit: () => void }) {
         </div>
 
         {[
-          { id: "hunt" as const, emoji: "🧠", title: "Охота за брейнротом", desc: "Лови брейнротов по всему экрану за 20 секунд! Редкие стоят больше.", reward: "до +2250 очков", color: "#9B59FF" },
-          { id: "battle" as const, emoji: "🤪", title: "Битва с брейнротом", desc: "Пошаговая битва с Мегабрейнротом. Выбирай атаки и побеждай!", reward: "до +999 очков", color: "#FF00FF" },
-          { id: "vortex" as const, emoji: "🌀", title: "Вихрь безумия", desc: "Тычь по летающим брейнротам пока не кончится время!", reward: "до +1500 очков", color: "#00A2FF" },
+          { id: "hunt" as const, emoji: "🧠", title: "Охота за брейнротом", desc: "Лови брейнротов за 20 сек! Редкие стоят больше.", reward: "до +225 🪙", color: "#9B59FF" },
+          { id: "battle" as const, emoji: "🤪", title: "Битва с брейнротом", desc: "Пошаговый бой с Мегабрейнротом. Победи и получи монеты!", reward: "до +125 🪙", color: "#FF00FF" },
+          { id: "vortex" as const, emoji: "🌀", title: "Вихрь безумия", desc: "Тычь по брейнротам пока время не кончилось!", reward: "до +150 🪙", color: "#00A2FF" },
         ].map(mg => (
           <button key={mg.id} onClick={() => setMinigame(mg.id)}
-            className="w-full text-left rounded-2xl p-4 transition-all hover:scale-102 active:scale-98 flex items-center gap-4"
+            className="w-full text-left rounded-2xl p-4 transition-all active:scale-95 flex items-center gap-4"
             style={{ background: `${mg.color}18`, border: `2px solid ${mg.color}44` }}>
-            <div className="text-5xl flex-shrink-0 animate-float">{mg.emoji}</div>
+            <div className="text-4xl flex-shrink-0 animate-float">{mg.emoji}</div>
             <div className="flex-1">
-              <div style={{ fontFamily: "'Fredoka One', cursive", fontSize: "1.1rem", color: mg.color }}>{mg.title}</div>
+              <div style={{ fontFamily: "'Fredoka One', cursive", fontSize: "1.05rem", color: mg.color }}>{mg.title}</div>
               <p className="text-white/60 text-xs font-semibold mt-0.5">{mg.desc}</p>
-              <div className="mt-2 inline-block px-2 py-0.5 rounded-full text-xs font-black" style={{ background: `${mg.color}33`, color: mg.color }}>
-                💎 {mg.reward}
+              <div className="mt-1.5 inline-block px-2 py-0.5 rounded-full text-xs font-black" style={{ background: `${mg.color}33`, color: mg.color }}>
+                {mg.reward}
               </div>
             </div>
             <Icon name="ChevronRight" size={20} style={{ color: mg.color, opacity: 0.7 }} />
           </button>
         ))}
+
+        <button onClick={() => setMinigame("shop")}
+          className="w-full rounded-2xl p-4 text-center transition-all active:scale-95"
+          style={{ background: "linear-gradient(135deg,rgba(255,215,0,0.15),rgba(255,140,0,0.15))", border: "2px solid rgba(255,215,0,0.4)" }}>
+          <div className="text-3xl mb-1">🏪</div>
+          <div style={{ fontFamily: "'Fredoka One', cursive", fontSize: "1.1rem" }} className="text-yellow-400">Магазин Брейнротов</div>
+          <p className="text-white/50 text-xs font-semibold mt-0.5">Трать монеты на уникальных существ!</p>
+          <div className="mt-1 text-xs font-black text-orange-400">{ownedBrainrots.length} / {brainrotCatalogue.length} куплено</div>
+        </button>
       </div>
     </div>
   );
 }
 
 // ===== GENERIC WORLD SCREEN =====
-function GenericWorldScreen({ world, onExit }: { world: typeof worlds[0]; onExit: () => void }) {
+function GenericWorldScreen({ world, onExit, avatar, coins, setCoins }: { world: typeof worlds[0]; onExit: () => void; avatar: string; coins: number; setCoins: (fn: (c: number) => number) => void }) {
   const [phase, setPhase] = useState<"loading" | "playing">("loading");
   const [hp] = useState(100);
   const [score, setScore] = useState(0);
@@ -618,31 +708,41 @@ function GenericWorldScreen({ world, onExit }: { world: typeof worlds[0]; onExit
 
       <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 gap-4">
         <div className="relative animate-float">
-          <div className="w-20 h-20 rounded-2xl flex items-center justify-center text-4xl" style={{ background: "linear-gradient(135deg,#9B59FF,#00A2FF)", boxShadow: "0 0 30px rgba(155,89,255,0.5)" }}>🧑</div>
+          <div className="w-20 h-20 rounded-2xl flex items-center justify-center text-4xl" style={{ background: "linear-gradient(135deg,#9B59FF,#00A2FF)", boxShadow: "0 0 30px rgba(155,89,255,0.5)" }}>{avatar}</div>
           <div className="absolute -top-2 -right-2 px-2 py-0.5 rounded-full text-xs font-black" style={{ background: "#FFD700", color: "#1a1200" }}>ЛВЛ 23</div>
         </div>
-        <div className="w-48">
-          <div className="flex justify-between text-xs mb-1">
-            <span className="text-red-400 font-black">❤️ HP</span>
-            <span className="text-white font-bold">{hp}/100</span>
-          </div>
-          <div className="h-3 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.1)" }}>
-            <div className="h-full rounded-full" style={{ width: `${hp}%`, background: "linear-gradient(90deg,#FF4444,#FF8C00)" }} />
+        <div className="flex gap-4 w-48">
+          <div className="flex-1">
+            <div className="flex justify-between text-xs mb-1">
+              <span className="text-red-400 font-black">❤️ HP</span>
+              <span className="text-white font-bold">{hp}/100</span>
+            </div>
+            <div className="h-3 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.1)" }}>
+              <div className="h-full rounded-full" style={{ width: `${hp}%`, background: "linear-gradient(90deg,#FF4444,#FF8C00)" }} />
+            </div>
           </div>
         </div>
+        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full" style={{ background: "rgba(255,165,0,0.15)", border: "1.5px solid rgba(255,165,0,0.4)" }}>
+          <span className="text-sm">🪙</span>
+          <span className="font-black text-orange-400">{coins.toLocaleString()}</span>
+          <span className="text-xs text-orange-400/70 font-bold">монет</span>
+        </div>
         <div className="w-full max-w-sm space-y-2">
-          {details.events.map((ev, i) => (
-            <button key={ev} onClick={() => setScore(s => s + (i + 1) * 10)}
-              className="w-full p-3 rounded-xl font-black text-sm text-white text-left flex items-center gap-3 transition-all active:scale-95"
-              style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)" }}>
-              <span className="text-xl">{ev.split(" ")[0]}</span>
-              <div>
-                <div className="font-black">{ev.slice(ev.indexOf(" ") + 1)}</div>
-                <div className="text-xs text-white/50 font-semibold">+{(i + 1) * 10} очков</div>
-              </div>
-              <Icon name="ChevronRight" size={16} className="ml-auto opacity-50" />
-            </button>
-          ))}
+          {details.events.map((ev, i) => {
+            const reward = (i + 1) * 15;
+            return (
+              <button key={ev} onClick={() => { setScore(s => s + reward); setCoins(c => c + reward); }}
+                className="w-full p-3 rounded-xl font-black text-sm text-white text-left flex items-center gap-3 transition-all active:scale-95"
+                style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)" }}>
+                <span className="text-xl">{ev.split(" ")[0]}</span>
+                <div>
+                  <div className="font-black">{ev.slice(ev.indexOf(" ") + 1)}</div>
+                  <div className="text-xs text-orange-400/80 font-semibold">+{reward} 🪙</div>
+                </div>
+                <Icon name="ChevronRight" size={16} className="ml-auto opacity-50" />
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -666,17 +766,20 @@ function GenericWorldScreen({ world, onExit }: { world: typeof worlds[0]; onExit
   );
 }
 
-function WorldScreen({ world, onExit }: { world: typeof worlds[0]; onExit: () => void }) {
-  if (world.id === 5) return <BrainrotWorld onExit={onExit} />;
-  return <GenericWorldScreen world={world} onExit={onExit} />;
+type PlayerProps = { coins: number; setCoins: (fn: (c: number) => number) => void; avatar: string; ownedBrainrots: number[]; setOwnedBrainrots: (fn: (b: number[]) => number[]) => void };
+
+function WorldScreen({ world, onExit, playerProps }: { world: typeof worlds[0]; onExit: () => void; playerProps: PlayerProps }) {
+  if (world.id === 5) return <BrainrotWorld onExit={onExit} playerProps={playerProps} />;
+  return <GenericWorldScreen world={world} onExit={onExit} avatar={playerProps.avatar} coins={playerProps.coins} setCoins={playerProps.setCoins} />;
 }
 
-function WorldsTab({ worlds }: { worlds: typeof worlds }) {
+function WorldsTab({ worlds, coins, setCoins, avatar, ownedBrainrots, setOwnedBrainrots }: { worlds: typeof worlds } & PlayerProps) {
   const [selected, setSelected] = useState<number | null>(null);
   const [activeWorld, setActiveWorld] = useState<typeof worlds[0] | null>(null);
+  const playerProps: PlayerProps = { coins, setCoins, avatar, ownedBrainrots, setOwnedBrainrots };
 
   if (activeWorld) {
-    return <WorldScreen world={activeWorld} onExit={() => setActiveWorld(null)} />;
+    return <WorldScreen world={activeWorld} onExit={() => setActiveWorld(null)} playerProps={playerProps} />;
   }
 
   return (
@@ -801,9 +904,10 @@ function ShopTab({ items, packs, inventory, setInventory }: { items: typeof shop
   );
 }
 
-function ProfileTab({ level, xp, maxXp, robux, quests, inventory, items }: { level: number; xp: number; maxXp: number; robux: number; quests: typeof quests; inventory: number[]; items: typeof shopItems }) {
+function ProfileTab({ level, xp, maxXp, robux, coins, quests, inventory, items, avatar, setAvatar, ownedBrainrots }: { level: number; xp: number; maxXp: number; robux: number; coins: number; quests: typeof quests; inventory: number[]; items: typeof shopItems; avatar: string; setAvatar: (a: string) => void; ownedBrainrots: number[] }) {
   const xpPct = Math.round((xp / maxXp) * 100);
   const ownedItems = items.filter(i => inventory.includes(i.id));
+  const myBrainrots = brainrotCatalogue.filter(b => ownedBrainrots.includes(b.id));
 
   const stats = [
     { label: "Побед", value: "147", emoji: "🏆" },
@@ -818,7 +922,7 @@ function ProfileTab({ level, xp, maxXp, robux, quests, inventory, items }: { lev
     <div className="space-y-5 animate-slide-up">
       <div className="roblox-card p-6 text-center" style={{ background: "linear-gradient(135deg, #1a1f5e, #0d1b4b)" }}>
         <div className="w-24 h-24 rounded-2xl mx-auto mb-3 flex items-center justify-center text-5xl" style={{ background: "linear-gradient(135deg,#9B59FF,#00A2FF)" }}>
-          🧑
+          {avatar}
         </div>
         <h2 style={{ fontFamily: "'Fredoka One', cursive", fontSize: "1.5rem" }} className="text-white">КорольИгрок</h2>
         <p className="text-muted-foreground text-sm font-semibold">@kingplayer2025</p>
@@ -827,6 +931,11 @@ function ProfileTab({ level, xp, maxXp, robux, quests, inventory, items }: { lev
           <div className="text-center">
             <div className="font-black text-lg text-yellow-400">⭐ {level}</div>
             <div className="text-xs text-muted-foreground font-semibold">Уровень</div>
+          </div>
+          <div className="h-8 w-px bg-border" />
+          <div className="text-center">
+            <div className="font-black text-lg text-orange-400">🪙 {coins.toLocaleString()}</div>
+            <div className="text-xs text-muted-foreground font-semibold">Монеты</div>
           </div>
           <div className="h-8 w-px bg-border" />
           <div className="text-center">
@@ -858,6 +967,29 @@ function ProfileTab({ level, xp, maxXp, robux, quests, inventory, items }: { lev
           ))}
         </div>
       </div>
+
+      {myBrainrots.length > 0 && (
+        <div>
+          <h3 style={{ fontFamily: "'Fredoka One', cursive", fontSize: "1.3rem" }} className="text-white mb-1">🧠 Мои Брейнроты</h3>
+          <p className="text-white/50 text-xs font-semibold mb-3">Выбери аватара — он появится в мирах!</p>
+          <div className="grid grid-cols-4 gap-2">
+            <button onClick={() => setAvatar("🧑")}
+              className="rounded-xl p-2 text-center transition-all active:scale-90"
+              style={{ background: avatar === "🧑" ? "rgba(155,89,255,0.3)" : "rgba(255,255,255,0.05)", border: `2px solid ${avatar === "🧑" ? "#9B59FF" : "rgba(255,255,255,0.1)"}` }}>
+              <div className="text-2xl">🧑</div>
+              <div className="text-xs text-white/70 font-bold mt-1">По умол.</div>
+            </button>
+            {myBrainrots.map(b => (
+              <button key={b.id} onClick={() => setAvatar(b.emoji)}
+                className="rounded-xl p-2 text-center transition-all active:scale-90"
+                style={{ background: avatar === b.emoji ? `${b.color}44` : "rgba(255,255,255,0.05)", border: `2px solid ${avatar === b.emoji ? b.color : "rgba(255,255,255,0.1)"}` }}>
+                <div className="text-2xl">{b.emoji}</div>
+                <div className="text-xs font-bold mt-1" style={{ color: avatar === b.emoji ? b.color : "rgba(255,255,255,0.5)" }}>{b.name}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div>
         <h3 style={{ fontFamily: "'Fredoka One', cursive", fontSize: "1.3rem" }} className="text-white mb-3">🎒 Инвентарь ({ownedItems.length})</h3>
